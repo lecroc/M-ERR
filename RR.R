@@ -3,10 +3,11 @@
 library(ggplot2)
 library(caret)
 library(dplyr)
+library(MASS)
 
 ## Get Data
 
-setwd("H:/direct_r/Miracle-Ear/Analytics/Funnel Analysis August 2017")
+setwd("H:/direct_r/Miracle-Ear/Analytics/Funnel Analysis August 2017/M-ERR")
 
 rrd<-read.csv("./ResponseRate.csv")
 
@@ -60,14 +61,36 @@ rrd$CPM<-rrd$SpotCost/rrd$Oldest
 rrd$Program<-NULL
 rrd$Length<-NULL
 rrd$Source<-NULL
+rrd$SpotCost<-NULL
+rrd$Calls<-NULL
+rrd$Leads<-NULL
 
 # Plots
 
-qplot(log1p(SpotCost), data=rrd, fill=TVType, bins=10)
-qplot(log1p(Leads), data=rrd, fill=TVType, bins=25)
-qplot(log1p(Oldest), data=rrd, fill=TVType, bins=25)
-qplot(log1p(RR), data=rrd, fill=TVType, bins=25)
-qplot(log1p(CPM), data=rrd, fill=TVType, bins=25)
+qplot(Oldest, data=rrd, fill=TVType, bins=25)
+qplot(Old, data=rrd, fill=TVType, bins=25)
+qplot(Base, data=rrd, fill=TVType, bins=25)
+qplot(RR, data=rrd, fill=TVType, bins=25)
+qplot(CPM, data=rrd, fill=TVType, bins=25)
+
+# No numeric variables have normal distribution - convert to log values
+
+rrd$Oldest<-log(rrd$Oldest)
+rrd$Old<-log(rrd$Old)
+rrd$Base<-log(rrd$Base)
+rrd$RR<-log(rrd$RR)
+rrd$CPM<-log(rrd$CPM)
+
+# Re-plot to see impact of log transformations
+
+qplot(Oldest, data=rrd, fill=TVType, bins=25)
+qplot(Old, data=rrd, fill=TVType, bins=25)
+qplot(Base, data=rrd, fill=TVType, bins=25)
+qplot(RR, data=rrd, fill=TVType, bins=25)
+qplot(CPM, data=rrd, fill=TVType, bins=25)
+
+
+# Boxplots to see relationships
 
 p1<-ggplot(rrd, aes(x=DayPart, y=RR, fill=DayPart))+geom_boxplot()+ggtitle("RR by TVType, Daypart")+facet_grid(.~TVType)
 
@@ -77,4 +100,33 @@ p2<-ggplot(rrd, aes(x=SpotName, y=RR, fill=SpotName))+geom_boxplot()+ggtitle("RR
 
 p2
 
-j<-lm(RR~., data=rrd)
+p3<-ggplot(rrd, aes(x=ProgramType, y=RR, fill=ProgramType))+geom_boxplot()+ggtitle("RR by ProgramType, TVType")+facet_grid(.~TVType)+theme(legend.position = "none", axis.text.x = element_text(angle = 60,hjust = 1))
+
+p3
+
+# Split data into training and testing sets
+
+set.seed(1234)
+
+inTrain<-createDataPartition(y=rrd$RR, p=.8, list=F, times=1)
+rrtrn<-rrd[inTrain,]
+rrtst<-rrd[-inTrain,]
+
+sum(rrtrn$TVType=="SY")
+sum(rrtrn$TVType=="NW")
+sum(rrtst$TVType=="SY")
+sum(rrtst$TVType=="NW")
+
+
+# Step-wise linear model to see what we get......
+
+fit<-lm(RR~., data=rrtrn)
+step<-stepAIC(fit, direction = "both")
+step$anova
+
+m1<-lm(RR ~ Month + DayPart + SpotName + Oldest + Base + CPM, data=rrtrn)
+
+pred1<-predict(m1, rrtst)
+
+rrtst$predRR<-pred1
+
