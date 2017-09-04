@@ -7,7 +7,7 @@ library(MASS)
 
 ## Get Data
 
-setwd("H:/direct_r/Miracle-Ear/Analytics/Funnel Analysis August 2017/M-ERR")
+# setwd("H:/direct_r/Miracle-Ear/Analytics/Funnel Analysis August 2017/M-ERR")
 
 rrd<-read.csv("./ResponseRate.csv")
 
@@ -52,10 +52,11 @@ rrd<-mutate(rrd, DayPart = ifelse(test=DayPart=="4", yes="Prime", no=DayPart))
 rrd<-mutate(rrd, DayPart = ifelse(test=DayPart=="5", yes="OV", no=DayPart))
 rrd<-mutate(rrd, DayPart = ifelse(test=DayPart=="7", yes="WE", no=DayPart))
 
-# Create RR field and comp field (response rate and composition)
+# Create RR field, a CPM field and comp field (response rate, CPM and composition)
 
 rrd$RR<-rrd$Leads/(rrd$Oldest*1000)
 rrd$CPM<-rrd$SpotCost/rrd$Oldest
+rrd$comp<-rrd$Oldest/rrd$Base
 
 # Drop columns we don't need
 rrd$Program<-NULL
@@ -65,6 +66,8 @@ rrd$SpotCost<-NULL
 rrd$Calls<-NULL
 rrd$Leads<-NULL
 
+write.csv(rrd, "./mlrrd.csv")
+
 # Plots
 
 qplot(Oldest, data=rrd, fill=TVType, bins=25)
@@ -72,6 +75,7 @@ qplot(Old, data=rrd, fill=TVType, bins=25)
 qplot(Base, data=rrd, fill=TVType, bins=25)
 qplot(RR, data=rrd, fill=TVType, bins=25)
 qplot(CPM, data=rrd, fill=TVType, bins=25)
+qplot(comp, data=rrd, fill=TVType, bins=25)
 
 # No numeric variables have normal distribution - convert to log values
 
@@ -80,6 +84,7 @@ rrd$Old<-log(rrd$Old)
 rrd$Base<-log(rrd$Base)
 rrd$RR<-log(rrd$RR)
 rrd$CPM<-log(rrd$CPM)
+rrd$comp<-log(rrd$comp)
 
 # Re-plot to see impact of log transformations
 
@@ -88,11 +93,12 @@ qplot(Old, data=rrd, fill=TVType, bins=25)
 qplot(Base, data=rrd, fill=TVType, bins=25)
 qplot(RR, data=rrd, fill=TVType, bins=25)
 qplot(CPM, data=rrd, fill=TVType, bins=25)
+qplot(comp, data=rrd, fill=TVType, bins=25)
 
 
 # Boxplots to see relationships
 
-p1<-ggplot(rrd, aes(x=DayPart, y=RR, fill=DayPart))+geom_boxplot()+ggtitle("RR by TVType, Daypart")+facet_grid(.~TVType)
+p1<-ggplot(rrd, aes(x=DayPart, y=RR, fill=DayPart))+geom_boxplot()+ggtitle("RR by TVType, Daypart")+facet_grid(.~TVType)+theme(legend.position = "none", axis.text.x = element_text(angle = 60,hjust = 1))
 
 p1
 
@@ -120,13 +126,30 @@ sum(rrtst$TVType=="NW")
 
 # Step-wise linear model to see what we get......
 
-fit<-lm(RR~., data=rrtrn)
-step<-stepAIC(fit, direction = "both")
-step$anova
+# fit<-lm(RR~., data=rrtrn)
+# step<-stepAIC(fit, direction = "both")
+# step$anova
 
-m1<-lm(RR ~ Month + DayPart + SpotName + Oldest + Base + CPM, data=rrtrn)
+m1<-lm(RR ~ Month + DayPart + SpotName + CPM + comp, data=rrtrn)
+summary(m1)
+
+
+rmse <- sqrt(mean((rrtrn$RR - m1$fitted.values)^2)) # calculate our measurement metric
+
+rmse # our measurement metric, the log of the average error
+
+avgerror<-rmse*mean(exp(rrtrn$RR)) # rmse ~ % of dollar value due to properties of natural log
+
+avgerror
 
 pred1<-predict(m1, rrtst)
 
-rrtst$predRR<-pred1
+rmse1<-sqrt(mean((rrtst$RR-pred1)^2))
 
+rmse1
+
+avgerror1<-rmse1*mean(exp(rrtst$RR))
+
+avgerror1
+
+mean(exp(rrtst$RR))
