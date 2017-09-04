@@ -45,15 +45,10 @@ inTrain<- createDataPartition(y=mdata$RR, p=0.7, list=F, times=1)
 trn<-mdata[inTrain,]
 tst<-mdata[-inTrain,]
 
-## Model xgBoost
+svm<-svm(RR~., data = trn)
 
-set.seed(4567)
+psvm<-predict(svm, tst)
 
-trdf<- data.table(trn, keep.rownames = F)
-tedf<-data.table(tst, keep.rownames = F)
+rmsesvm <- sqrt(mean((tst$RR - psvm)^2)) # calculate our measurement metric
 
-mxgB<-train(SalePrice~., data=trdf, method="xgbLinear")
-
-pxgB<-predict(mxgB, tedf)
-rmsexgB<-sqrt(mean((trn$RR-pxgB)^2))
-rmsexgB
+rmsesvm # our measurement metric, the log of the average error
