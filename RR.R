@@ -5,6 +5,18 @@ library(caret)
 library(dplyr)
 library(MASS)
 
+# set up functions for RMSE and MAE
+
+rmse<-function(error)
+{
+  sqrt(mean(error^2))
+}
+
+mae<-function(error)
+{
+  mean(abs(error))
+}
+
 ## Get Data
 
 # setwd("H:/direct_r/Miracle-Ear/Analytics/Funnel Analysis August 2017/M-ERR")
@@ -66,7 +78,7 @@ rrd$SpotCost<-NULL
 rrd$Calls<-NULL
 rrd$Leads<-NULL
 
-write.csv(rrd, "./mlrrd.csv")
+# write.csv(rrd, "./mlrrd.csv")
 
 # Plots
 
@@ -79,21 +91,23 @@ qplot(comp, data=rrd, fill=TVType, bins=25)
 
 # No numeric variables have normal distribution - convert to log values
 
-rrd$Oldest<-log(rrd$Oldest)
-rrd$Old<-log(rrd$Old)
-rrd$Base<-log(rrd$Base)
-rrd$RR<-log(rrd$RR)
-rrd$CPM<-log(rrd$CPM)
-rrd$comp<-log(rrd$comp)
+# rrd$Oldest<-log(rrd$Oldest)
+# $rrd$Old<-log(rrd$Old)
+# rrd$Base<-log(rrd$Base)
+# rrd$RR<-log(rrd$RR)
+# rrd$CPM<-log(rrd$CPM)
+# rrd$comp<-log(rrd$comp)
+
+# Tried the log transform, got better results with values as-is
 
 # Re-plot to see impact of log transformations
 
-qplot(Oldest, data=rrd, fill=TVType, bins=25)
-qplot(Old, data=rrd, fill=TVType, bins=25)
-qplot(Base, data=rrd, fill=TVType, bins=25)
-qplot(RR, data=rrd, fill=TVType, bins=25)
-qplot(CPM, data=rrd, fill=TVType, bins=25)
-qplot(comp, data=rrd, fill=TVType, bins=25)
+# qplot(Oldest, data=rrd, fill=TVType, bins=25)
+# qplot(Old, data=rrd, fill=TVType, bins=25)
+# qplot(Base, data=rrd, fill=TVType, bins=25)
+# qplot(RR, data=rrd, fill=TVType, bins=25)
+# qplot(CPM, data=rrd, fill=TVType, bins=25)
+# qplot(comp, data=rrd, fill=TVType, bins=25)
 
 
 # Boxplots to see relationships
@@ -130,26 +144,77 @@ sum(rrtst$TVType=="NW")
 # step<-stepAIC(fit, direction = "both")
 # step$anova
 
-m1<-lm(RR ~ Month + DayPart + SpotName + CPM + comp, data=rrtrn)
+m1<-lm(RR ~ ProgramType + DayPart + SpotName + Oldest + Old + CPM + comp, data=rrtrn)
 summary(m1)
 
+e<-rrtrn$RR-m1$fitted.values
 
-rmse <- sqrt(mean((rrtrn$RR - m1$fitted.values)^2)) # calculate our measurement metric
+rmse(e)
+mae(e)
 
-rmse # our measurement metric, the log of the average error
+# plot our model estimates vs. actuals
 
-avgerror<-rmse*mean(exp(rrtrn$RR)) # rmse ~ % of dollar value due to properties of natural log
+actual<-rrtrn$RR
 
-avgerror
+fitted<-m1$fitted.values
+
+# Separate numeric and factor variables from rrtrn
+nums<-sapply(rrtrn, is.numeric)
+numerics<-rrtrn[, nums]
+factors<-rrtrn[, !nums]
+
+results<-as.data.frame(cbind(actual, fitted, factors))
+
+results$diff<-results$actual-results$fitted
+
+View(results)
+
+p4<-ggplot(results, aes(x=SpotName, y=diff, fill=TVType))+geom_boxplot()+ggtitle("Error by Spot, TVType")+facet_grid(.~TVType)+theme(legend.position = "none", axis.text.x = element_text(angle = 60,hjust = 1))
+
+p4
+
+p5<-ggplot(results, aes(x=ProgramType, y=diff, fill=ProgramType))+geom_boxplot()+ggtitle("Error by Program, TVType")+facet_grid(.~TVType)+theme(legend.position = "none", axis.text.x = element_text(angle = 60,hjust = 1))
+
+p5
+
+# Predict test with regression model
 
 pred1<-predict(m1, rrtst)
 
-rmse1<-sqrt(mean((rrtst$RR-pred1)^2))
+pe<-rrtst$RR-pred1
 
-rmse1
+rmse(pe)
+mae(pe)
 
-avgerror1<-rmse1*mean(exp(rrtst$RR))
+# Compare model to just using an average
 
-avgerror1
+avgpred<-mean(rrtst$RR)
+avpe<-rrtst$RR-avgpred
 
-mean(exp(rrtst$RR))
+rmse(avpe)
+mae(avpe)
+
+# plot our model predictions vs. actuals
+
+actualp<-rrtst$RR
+
+fitted<-pred1
+
+# Separate numeric and factor variables from rrtrn
+nums<-sapply(rrtst, is.numeric)
+numerics<-rrtst[, nums]
+factors<-rrtst[, !nums]
+
+results1<-as.data.frame(cbind(actualp, fitted, factors))
+
+results1$diff<-results1$actual-results1$fitted
+
+View(results1)
+
+p6<-ggplot(results1, aes(x=SpotName, y=diff, fill=TVType))+geom_boxplot()+ggtitle("Error by Spot, TVType")+facet_grid(.~TVType)+theme(legend.position = "none", axis.text.x = element_text(angle = 60,hjust = 1))
+
+p6
+
+p7<-ggplot(results1, aes(x=ProgramType, y=diff, fill=ProgramType))+geom_boxplot()+ggtitle("Error by Program, TVType")+facet_grid(.~TVType)+theme(legend.position = "none", axis.text.x = element_text(angle = 60,hjust = 1))
+
+p7
