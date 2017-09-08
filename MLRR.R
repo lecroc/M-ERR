@@ -25,7 +25,8 @@ library(neuralnet)
 library(Cubist)
 library(elasticnet)
 library(pls)
-
+library(doSNOW)
+library(foreach)
 
 
 # set up functions for RMSE and MAE
@@ -85,6 +86,18 @@ tst<-tst1
 # Set up fit control
 fitControl<-trainControl(method="repeatedcv", number=10, repeats = 10)
 
+# initialize parallel processing
+
+getDoParWorkers()
+registerDoSNOW(makeCluster(16, type="SOCK"))
+getDoParWorkers()
+getDoParName()
+
+# Turn off scientific notation so we can see decimals
+
+options(scipen = 999)
+
+
 # SVM Model
 
 set.seed(345)
@@ -135,18 +148,6 @@ e3<-trn$RR-prf
 rmse(e3)
 mae(e3)
 
-# Neural Network
-
-set.seed(789)
-nnfit<-train(RR~., data=trn, method="neuralnet", trControl=fitControl)
-nnfit
-
-# evaluate Neural Network
-pnn<-predict(nnfit, trn)
-e4<-trn$RR-pnn
-rmse(e4)
-mae(e4)
-
 # Cubist
 
 set.seed(1645)
@@ -155,9 +156,9 @@ cfit
 
 # evaluate Cubist
 pc<-predict(cfit, trn)
-e5<-trn$RR-pc
-rmse(e5)
-mae(e5)
+e4<-trn$RR-pc
+rmse(e4)
+mae(e4)
 
 # Ridge Regression
 
@@ -168,9 +169,9 @@ rrfit
 
 # evaluate Ridge
 prr<-predict(rrfit, trn)
-e6<-trn$RR-prr
-rmse(e6)
-mae(e6)
+e5<-trn$RR-prr
+rmse(e5)
+mae(e5)
 
 
 # Lasso
@@ -180,11 +181,11 @@ set.seed(987)
 lsfit<-train(RR~., data=trn, method="lasso", trControl=fitControl)
 lsfit
 
-# evaluate Robust Linear Regression
+# evaluate Lasso
 prls<-predict(lsfit, trn)
-e7<-trn$RR-prls
-rmse(e7)
-mae(e7)
+e6<-trn$RR-prls
+rmse(e6)
+mae(e6)
 
 # PCA
 
@@ -194,7 +195,40 @@ pcafit
 
 # evalutae principal components
 ppca<-predict(pcafit, trn)
-e8<-trn$RR-ppca
+e7<-trn$RR-ppca
+rmse(e7)
+mae(e7)
+
+# Extreme Gradient Boost
+
+trndt<-data.table(trn, keep.rownames = F)
+tstdt<-data.table(tst, keep.rownames = F)
+
+xgbfit<-train(RR~., data=trndt, method="xgbLinear", trCrontrol=fitControl)
+xgbfit
+
+#evaluate Xgb
+pxgb<-predict(xgbfit, trndt)
+e9<-trndt$RR-pxgb
 rmse(e8)
 mae(e8)
 
+# Just use the average RR
+pavg<-mean(trn$RR)
+e10<-trn$RR-pavg
+rmse(e9)
+mae(e9)
+
+# Compile results from all models, compare to taking an average
+
+RMSEs<-c(rmse(e), rmse(e1), rmse(e2), rmse(e3), rmse(e4), rmse(e5), rmse(e6), rmse(e7), rmse(e8), rmse(e9))
+MAEs<-c(mae(e), mae(e1), mae(e2), mae(e3), mae(e4), mae(e5), mae(e6), mae(e7), mae(e8), mae(e9))
+Models<-c("SVM", "MARS", "glm", "RF", "Cubist", "Ridge", "Lasso", "PCA", "XGB", "AVG")
+
+Results<-as.data.frame(cbind(Models, RMSEs, MAEs))
+View(Results)
+
+StackTrain<-as.data.frame(cbind(trn$RR, psvm, pmf, pglm, prf, pc, prr, prls, ppca, pxgb))
+names(StackTrain)<-c("RR", "psvm", "pmf", "pglm", "prf", "pc", "prr", "prls", "ppca", "pxgb")
+
+View(StackTrain)
