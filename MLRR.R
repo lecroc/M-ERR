@@ -235,7 +235,9 @@ View(StackTrain)
 
 # stack model
 
-stack<-train(RR~., data=StackTrain, method="rf", trainControl=fitControl)
+set.seed(234)
+
+stack<-train(RR~., data=StackTrain, method="cubist", trainControl=fitControl)
 pstack<-predict(stack, StackTrain)
 e10<-StackTrain$RR-pstack
 rmse(e10)
@@ -245,4 +247,19 @@ mae(e10)
 
 tpsvm<-predict(svmfit, tst)
 tpmf<-predict(marsfit, tst)
+tpglm<-predict(glmfit, tst)
+tprf<-predict(rffit, tst)
+tpc<-predict(cfit, tst)
+tprr<-predict(rrfit, tst)
+tpls<-predict(lsfit, tst)
+tppca<-predict(pcafit, tst)
+tpxgb<-predict(xgbfit, tstdt)
+
+StackTest<-as.data.frame(cbind(tst$RR, tpsvm, tpmf, tpglm, tprf, tpc, tprr, tpls, tppca, tpxgb))
+names(StackTest)<-c("RR", "psvm", "pmf", "pglm", "prf", "pc", "prr", "prls", "ppca", "pxgb")
+
+pstacktst<-predict(stack, StackTest)
+e11<-StackTest$RR-pstacktst
+rmse(e11)
+mae(e11)
 
