@@ -209,13 +209,13 @@ xgbfit
 
 #evaluate Xgb
 pxgb<-predict(xgbfit, trndt)
-e9<-trndt$RR-pxgb
+e8<-trndt$RR-pxgb
 rmse(e8)
 mae(e8)
 
 # Just use the average RR
 pavg<-mean(trn$RR)
-e10<-trn$RR-pavg
+e9<-trn$RR-pavg
 rmse(e9)
 mae(e9)
 
@@ -232,3 +232,17 @@ StackTrain<-as.data.frame(cbind(trn$RR, psvm, pmf, pglm, prf, pc, prr, prls, ppc
 names(StackTrain)<-c("RR", "psvm", "pmf", "pglm", "prf", "pc", "prr", "prls", "ppca", "pxgb")
 
 View(StackTrain)
+
+# stack model
+
+stack<-train(RR~., data=StackTrain, method="rf", trainControl=fitControl)
+pstack<-predict(stack, StackTrain)
+e10<-StackTrain$RR-pstack
+rmse(e10)
+mae(e10)
+
+# predict test data
+
+tpsvm<-predict(svmfit, tst)
+tpmf<-predict(marsfit, tst)
+
