@@ -64,7 +64,7 @@ mdata<-mdata[c(4,1,2,3,5:37)]
 
 # Create train and test sets 
 set.seed(1234)
-inTrain<- createDataPartition(y=mdata$RR, p=0.6, list=F, times=1)
+inTrain<- createDataPartition(y=mdata$RR, p=0.8, list=F, times=1)
 trn<-mdata[inTrain,]
 tst<-mdata[-inTrain,]
 
@@ -187,6 +187,7 @@ e6<-trn$RR-prls
 rmse(e6)
 mae(e6)
 
+
 # PCA
 
 set.seed(12345)
@@ -237,7 +238,7 @@ View(StackTrain)
 
 set.seed(234)
 
-stack<-train(RR~., data=StackTrain, method="cubist", trainControl=fitControl)
+stack<-train(RR~., data=StackTrain, method="bagEarth", trainControl=fitControl)
 pstack<-predict(stack, StackTrain)
 e10<-StackTrain$RR-pstack
 rmse(e10)
@@ -262,4 +263,5 @@ pstacktst<-predict(stack, StackTest)
 e11<-StackTest$RR-pstacktst
 rmse(e11)
 mae(e11)
+
 

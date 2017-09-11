@@ -78,7 +78,7 @@ rrd$SpotCost<-NULL
 rrd$Calls<-NULL
 rrd$Leads<-NULL
 
-# write.csv(rrd, "./mlrrd.csv")
+write.csv(rrd, "./mlrrd.csv")
 
 # Plots
 
@@ -140,11 +140,14 @@ sum(rrtst$TVType=="NW")
 
 # Step-wise linear model to see what we get......
 
-# fit<-lm(RR~., data=rrtrn)
-# step<-stepAIC(fit, direction = "both")
-# step$anova
+ fit<-lm(RR~., data=rrtrn)
+ step<-stepAIC(fit, direction = "both")
+ step$anova
 
-m1<-lm(RR ~ ProgramType + DayPart + SpotName + Oldest + Old + CPM + comp, data=rrtrn)
+# turn off scientific notation
+options(scipen = 999)
+
+m1<-lm(RR ~ Month+DayPart+SpotName+Oldest+Old+Base+CPM+comp, data=rrtrn)
 summary(m1)
 
 e<-rrtrn$RR-m1$fitted.values
@@ -176,6 +179,8 @@ p4
 p5<-ggplot(results, aes(x=ProgramType, y=diff, fill=ProgramType))+geom_boxplot()+ggtitle("Error by Program, TVType")+facet_grid(.~TVType)+theme(legend.position = "none", axis.text.x = element_text(angle = 60,hjust = 1))
 
 p5
+
+
 
 # Predict test with regression model
 
