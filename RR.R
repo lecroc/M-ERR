@@ -78,7 +78,7 @@ rrd$SpotCost<-NULL
 rrd$Calls<-NULL
 rrd$Leads<-NULL
 
-write.csv(rrd, "./mlrrd.csv")
+# write.csv(rrd, "./mlrrd.csv")
 
 # Plots
 
@@ -147,7 +147,7 @@ sum(rrtst$TVType=="NW")
 # turn off scientific notation
 options(scipen = 999)
 
-m1<-lm(RR ~ Month+DayPart+SpotName+Oldest+Old+Base+CPM+comp, data=rrtrn)
+m1<-lm(RR ~ ProgramType+DayPart+SpotName+Oldest+Old+Base+CPM+comp, data=rrtrn)
 summary(m1)
 
 e<-rrtrn$RR-m1$fitted.values
@@ -160,6 +160,9 @@ mae(e)
 actual<-rrtrn$RR
 
 fitted<-m1$fitted.values
+
+plot(actual~fitted, col=rrtrn$TVType)
+abline(lm(actual~fitted))
 
 # Separate numeric and factor variables from rrtrn
 nums<-sapply(rrtrn, is.numeric)
@@ -203,14 +206,17 @@ mae(avpe)
 
 actualp<-rrtst$RR
 
-fitted<-pred1
+fittedp<-pred1
+
+plot(actualp~fittedp, col=rrtst$TVType)
+abline(lm(actualp~fittedp))
 
 # Separate numeric and factor variables from rrtrn
 nums<-sapply(rrtst, is.numeric)
 numerics<-rrtst[, nums]
 factors<-rrtst[, !nums]
 
-results1<-as.data.frame(cbind(actualp, fitted, factors))
+results1<-as.data.frame(cbind(actualp, fittedp, factors))
 
 results1$diff<-results1$actual-results1$fitted
 
